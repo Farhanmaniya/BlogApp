@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blogify - Thoughts & Ideas</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="index.html" class="nav-brand">Blog<span>ify</span></a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="#latest">Articles</a></li>
+        </ul>
+        <div class="nav-right">
+            <a href="admin/login.html" class="btn-nav btn-ghost">Admin</a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <div class="hero">
+        <div class="hero-content">
+            <div class="hero-label">Welcome to Blogify</div>
+            <h1>Ideas Worth <em>Reading</em></h1>
+            <p class="hero-desc">
+                A personal space for thoughts on backend development, system design, and the journey of building
+                real-world applications.
+            </p>
+            <a href="#latest" class="btn-nav btn-primary-sm" style="display: inline-block; padding: 0.65rem 1.4rem;">
+                Read Articles ->
+            </a>
+        </div>
+
+        <!-- Featured Post -->
+        <div>
+            <div id="featuredPost">
+                <div class="loading">Loading feature post...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Latest Posts -->
+    <div class="section" id="latest">
+        <div class="section-label">Latest Articles</div>
+        <h2 class="section-title">All Posts</h2>
+        <div class="divider"></div>
+
+        <!-- Category Filter -->
+        <div id="categoryFilter" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem;"></div>
+
+        <!-- Post Grid -->
+        <div id="postsGrid" class="posts-grid">
+            <div class="loading">Loading posts..</div>
+        </div>
+
+        <!-- Pagination -->
+        <div id="pagination" class="pagination"></div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-brand">Blog<span>ify</span></div>
+        <p class="footer-copy">Built with Node.js & Passion</p>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/index.js"></script>
+</body>
+
+</html>

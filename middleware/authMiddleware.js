@@ -5,7 +5,7 @@ function checkAuth(cookieName) {
         const token = req.cookies[cookieName];
 
         if (!token) {
-            next();
+           return next();
         }
 
         try {
@@ -16,4 +16,8 @@ function checkAuth(cookieName) {
             next();
         }
     }
-}
+};
+
+module.exports = {
+    checkAuth,
+};

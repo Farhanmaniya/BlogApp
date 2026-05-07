@@ -18,7 +18,7 @@ function createToken(user) {
 }
 
 function validateToken(token){
-    const playload = JWT.verify(token, secret);
+    const playload = JWT.verify(token, secret, { exipresIn: "7d" });
     return playload;
 }
 
