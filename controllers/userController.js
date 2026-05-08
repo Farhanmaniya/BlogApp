@@ -31,11 +31,12 @@ const userSignIn = async (req, res) => {
       .cookie("token", token, {
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        sameSite: 'lax',
       })
       .status(200)
       .json({
         message: "User signed in successfully",
-        // token,
+        token,
         user: {
           id: user._id,
           fullName: user.fullName,

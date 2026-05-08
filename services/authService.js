@@ -1,25 +1,25 @@
 const JWT = require('jsonwebtoken');
-const dotenve = require('dotenv');
-dotenve.config();
+const dotenv = require('dotenv');
+dotenv.config();
 
 // Load secret key from environment variable
-const secret = process.env.JwT_SECRET;
+const secret = process.env.JWT_SECRET;
 
 function createToken(user) {
-    const playload = {
+    const payload = {
         _id: user._id,
         email: user.email,
         profileImageURL: user.profileImageURL,
         role: user.role,
     };
 
-    const token = JWT.sign(playload, secret);
+    const token = JWT.sign(payload, secret, { expiresIn: '7d' });
     return token;
 }
 
 function validateToken(token){
-    const playload = JWT.verify(token, secret, { exipresIn: "7d" });
-    return playload;
+    const payload = JWT.verify(token, secret);
+    return payload;
 }
 
 module.exports = {
