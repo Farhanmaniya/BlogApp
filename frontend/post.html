@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog - Blogify</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-brand">Blog<span>ify</span></a>
+        <ul class="nav-links">
+            <li><a href="index.html">← All Articles</a></li>
+        </ul>
+        <div class="nav-right">
+            <a href="admin/login.html" class="btn btn-ghost">Admin</a>
+        </div>
+    </nav>
+
+    <div id="postContent">
+        <div class="loading" style="padding-top: 8rem;">Loading</div>
+    </div>
+
+    <footer>
+        <div class="footer-brand">Blog<span>ify</span></div>
+        <p class="footer-copy">&copy; 2026 Farhan Maniya</p>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script>
+        async function loadPost() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get("id");
+
+            if (!id) {
+                document.getElementById("postContent").innerHTML =
+                    '<div class="alert alert-error" style="margin:8rem 4rem">No post ID provided.</div>';
+                return;
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,75 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blogify - Thoughts & Ideas</title>
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blogify — Ideas Worth Reading</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
 
-    <!-- Navbar -->
-    <nav class="navbar">
-        <a href="index.html" class="nav-brand">Blog<span>ify</span></a>
-        <ul class="nav-links">
-            <li><a href="index.html">Home</a></li>
-            <li><a href="#latest">Articles</a></li>
-        </ul>
-        <div class="nav-right">
-            <a href="admin/login.html" class="btn-nav btn-ghost">Admin</a>
-        </div>
-    </nav>
+  <nav class="navbar">
+    <div class="nav-brand">Blog<span>ify</span></div>
+    <ul class="nav-links">
+      <li><a href="#latest">Articles</a></li>
+    </ul>
+    <div class="nav-right">
+      <a href="admin/login.html" class="btn btn-ghost">Admin Login</a>
+    </div>
+  </nav>
 
-    <!-- Hero -->
-    <div class="hero">
-        <div class="hero-content">
-            <div class="hero-label">Welcome to Blogify</div>
-            <h1>Ideas Worth <em>Reading</em></h1>
-            <p class="hero-desc">
-                A personal space for thoughts on backend development, system design, and the journey of building
-                real-world applications.
-            </p>
-            <a href="#latest" class="btn-nav btn-primary-sm" style="display: inline-block; padding: 0.65rem 1.4rem;">
-                Read Articles ->
-            </a>
-        </div>
+  <!-- Hero -->
+  <div class="hero">
+    <div>
+      <div class="hero-eyebrow">Welcome to Blogify</div>
+      <h1>Ideas Worth <em>Reading.</em></h1>
+      <p class="hero-desc">
+        Thoughts on backend development, Node.js, system design,
+        and the journey of building real-world applications.
+      </p>
+      <a href="#latest" class="btn btn-primary">Browse Articles →</a>
+    </div>
+    <div id="featuredPost">
+      <div class="loading">Loading</div>
+    </div>
+  </div>
 
-        <!-- Featured Post -->
-        <div>
-            <div id="featuredPost">
-                <div class="loading">Loading feature post...</div>
+  <!-- All Posts -->
+  <div class="section" id="latest">
+    <div class="section-eyebrow">All Articles</div>
+    <h2 class="section-title">Latest Posts</h2>
+    <div class="divider"></div>
+    <div id="postsGrid" class="posts-grid"><div class="loading">Loading</div></div>
+    <div id="pagination" class="pagination"></div>
+  </div>
+
+  <footer>
+    <div class="footer-brand">Blog<span>ify</span></div>
+    <p class="footer-copy">&copy; 2026 Farhan Maniya</p>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script>
+    let page = 1;
+    const LIMIT = 6;
+
+    async function loadPosts() {
+      const grid = document.getElementById("postsGrid");
+      grid.innerHTML = '<div class="loading">Loading</div>';
+      try {
+        const res = await apiFetch(`/api/blog?page=${page}&limit=${LIMIT}`);
+        const data = await res.json();
+        if (!data.success || !data.blogs?.length) {
+          grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><h3>No posts yet</h3><p>Check back soon.</p></div>';
+          return;
+        }
+        grid.innerHTML = data.blogs.map(b => `
+          <a href="post.html?id=${b._id}" class="post-card">
+            <div class="card-img">
+              ${b.coverImage ? `<img src="${API_BASE}${b.coverImage}" alt="${b.title}">` : "📝"}
             </div>
-        </div>
-    </div>
+            <div class="card-body">
+              <div class="card-title">${b.title}</div>
+              <div class="card-excerpt">${b.body.substring(0, 120)}...</div>
+              <div class="card-meta">
+                <span class="card-author">${b.createdBy?.fullName || "Farhan"}</span> · ${formatDate(b.createdAt)}
+              </div>
+              <div class="read-more">Read More →</div>
+            </div>
+          </a>`).join("");
 
-    <!-- Latest Posts -->
-    <div class="section" id="latest">
-        <div class="section-label">Latest Articles</div>
-        <h2 class="section-title">All Posts</h2>
-        <div class="divider"></div>
+        renderPagination(data.totalPages || 1, page);
+        if (page === 1) renderFeatured(data.blogs[0]);
+      } catch (e) {
+        grid.innerHTML = '<div class="alert alert-error" style="grid-column:1/-1">Failed to load posts. Is the backend running?</div>';
+      }
+    }
 
-        <!-- Category Filter -->
-        <div id="categoryFilter" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem;"></div>
+    function renderFeatured(b) {
+      if (!b) return;
+      document.getElementById("featuredPost").innerHTML = `
+        <a href="post.html?id=${b._id}" class="hero-featured">
+          <div class="hero-img">
+            ${b.coverImage ? `<img src="${API_BASE}${b.coverImage}" alt="${b.title}">` : "📝"}
+          </div>
+          <div class="hero-body">
+            <div class="hero-cat">Latest Post</div>
+            <div class="hero-title">${b.title}</div>
+            <div class="hero-meta">${formatDate(b.createdAt)} · ${b.createdBy?.fullName || "Farhan"}</div>
+          </div>
+        </a>`;
+    }
 
-        <!-- Post Grid -->
-        <div id="postsGrid" class="posts-grid">
-            <div class="loading">Loading posts..</div>
-        </div>
+    function renderPagination(total, current) {
+      const wrap = document.getElementById("pagination");
+      if (total <= 1) { wrap.innerHTML = ""; return; }
+      let html = `<button class="page-btn" onclick="goPage(${current-1})" ${current===1?"disabled":""}>←</button>`;
+      for (let i = 1; i <= total; i++)
+        html += `<button class="page-btn ${i===current?"active":""}" onclick="goPage(${i})">${i}</button>`;
+      html += `<button class="page-btn" onclick="goPage(${current+1})" ${current===total?"disabled":""}>→</button>`;
+      wrap.innerHTML = html;
+    }
 
-        <!-- Pagination -->
-        <div id="pagination" class="pagination"></div>
-    </div>
+    function goPage(p) {
+      page = p; loadPosts();
+      document.getElementById("latest").scrollIntoView({ behavior: "smooth" });
+    }
 
-    <!-- Footer -->
-    <footer>
-        <div class="footer-brand">Blog<span>ify</span></div>
-        <p class="footer-copy">Built with Node.js & Passion</p>
-    </footer>
-
-    <script src="js/config.js"></script>
-    <script src="js/index.js"></script>
+    loadPosts();
+  </script>
 </body>
-
 </html>

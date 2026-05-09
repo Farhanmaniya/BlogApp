@@ -9,6 +9,19 @@ const blogSchema = new Schema({
         type: String,
         required: true,
     },
+    excerpt: {
+        type: String,
+        required: false,
+    },
+    category: {
+        type: String,
+        required: false,
+    },
+    slug: {
+        type: String,
+        required: true,
+        unique: true,
+    },
     coverImage: {
         type: String,
         required: false,
@@ -16,6 +29,10 @@ const blogSchema = new Schema({
     createdBy: {
         type: Schema.Types.ObjectId,
         ref: 'user',
+    },
+    views: {
+        type: Number,
+        default: 0
     },
 }, { timestamps: true });
 

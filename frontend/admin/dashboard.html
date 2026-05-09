@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Blogify Admin</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">Blog<span>ify</span> <span style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);font-weight:400;letter-spacing:0.1em;">ADMIN</span></div>
+    <ul class="nav-links">
+      <li><a href="#dashboard" onclick="showView('dashboard')">Dashboard</a></li>
+      <li><a href="#create" onclick="showView('create')">New Post</a></li>
+    </ul>
+    <div class="nav-right">
+      <span id="welcomeUser" style="font-size:0.82rem;color:var(--muted);"></span>
+      <button class="btn btn-ghost" onclick="handleLogout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="admin-wrap">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-label">Menu</div>
+      <ul class="sidebar-nav">
+        <li><a href="#" onclick="showView('dashboard')" id="nav-dashboard" class="active">📊 Dashboard</a></li>
+        <li><a href="#" onclick="showView('posts')" id="nav-posts">📝 All Posts</a></li>
+        <li><a href="#" onclick="showView('create')" id="nav-create">✍️ New Post</a></li>
+        <li style="margin-top:auto; padding-top:2rem;">
+          <a href="../index.html">🌐 View Blog</a>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+
+      <!-- DASHBOARD VIEW -->
+      <div id="view-dashboard">
+        <div class="admin-topbar">
+          <h1>Dashboard</h1>
+        </div>
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-lbl">Total Posts</div>
+            <div class="stat-num" id="statTotal">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-lbl">This Month</div>
+            <div class="stat-num" id="statMonth">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-lbl">With Cover Image</div>
+            <div class="stat-num" id="statCover">—</div>
+          </div>
+        </div>
+        <div class="table-card">
+          <div class="table-card-head">
+            <h3>Recent Posts</h3>
+            <button class="btn btn-primary" onclick="showView('create')">+ New Post</button>
+          </div>
+          <div id="recentPostsTable"><div class="loading">Loading</div></div>
+        </div>
+      </div>
+
+      <!-- ALL POSTS VIEW -->
+      <div id="view-posts" style="display:none;">
+        <div class="admin-topbar">
+          <h1>All Posts</h1>
+          <button class="btn btn-primary" onclick="showView('create')">+ New Post</button>
+        </div>
+        <div class="table-card">
+          <div id="allPostsTable"><div class="loading">Loading</div></div>
+        </div>
+      </div>
+
+      <!-- CREATE POST VIEW -->
+      <div id="view-create" style="display:none;">
+        <div class="admin-topbar">
+          <h1>New Post</h1>
+        </div>
+        <div class="create-card">
+          <div id="createAlert"></div>
+          <div class="form-group">
+            <label class="form-label">Post Title *</label>
+            <input type="text" id="postTitle" class="form-control" placeholder="Enter a compelling title...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cover Image (optional)</label>
+            <input type="file" id="coverImageFile" class="form-control" accept="image/*" onchange="previewImage(this)">
+            <img id="imgPreview" class="img-preview" alt="Preview">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Post Content *</label>
+            <textarea id="postBody" class="form-control" placeholder="Write your post content here...&#10;&#10;Each new line will become a paragraph."></textarea>
+          </div>
+          <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1rem;">
+            <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+            <button class="btn btn-primary" id="publishBtn" onclick="createPost()">Publish Post</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script>
+    // ── Auth guard ────────────────────────────────────────────────────────
+    if (!isLoggedIn()) window.location.href = "login.html";
+    const user = getUser();
+    document.getElementById("welcomeUser").textContent = `Hi, ${user?.fullName || "Admin"}`;
+
+    // ── View switching ────────────────────────────────────────────────────
+    const views = ["dashboard", "posts", "create"];
+    function showView(name) {
+      views.forEach(v => {
+        document.getElementById(`view-${v}`).style.display = v === name ? "block" : "none";
+        const nav = document.getElementById(`nav-${v}`);
+        if (nav) nav.classList.toggle("active", v === name);
+      });
+      if (name === "dashboard") loadDashboard();
+      if (name === "posts") loadAllPosts();
+    }
+
+    // ── Load Dashboard ────────────────────────────────────────────────────
+    async function loadDashboard() {
+      try {
+        const res = await apiFetch("/api/blog?page=1&limit=100");
+        const data = await res.json();
+        if (!data.success) return;
+
+        const blogs = data.blogs;
+        const now = new Date();
+        const thisMonth = blogs.filter(b => {
+          const d = new Date(b.createdAt);
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        });
+        const withCover = blogs.filter(b => b.coverImage);
+
+        document.getElementById("statTotal").textContent = data.total || blogs.length;
+        document.getElementById("statMonth").textContent = thisMonth.length;
+        document.getElementById("statCover").textContent = withCover.length;
+
+        renderPostsTable(blogs.slice(0, 5), "recentPostsTable");
+      } catch (e) {
+        document.getElementById("recentPostsTable").innerHTML =
+          '<div class="alert alert-error" style="margin:1rem">Failed to load posts.</div>';
+      }
+    }
+
+    // ── Load All Posts ────────────────────────────────────────────────────
+    async function loadAllPosts() {
+      document.getElementById("allPostsTable").innerHTML = '<div class="loading">Loading</div>';
+      try {
+        const res = await apiFetch("/api/blog?page=1&limit=100");
+        const data = await res.json();
+        if (!data.success) return;
+        renderPostsTable(data.blogs, "allPostsTable");
+      } catch (e) {
+        document.getElementById("allPostsTable").innerHTML =
+          '<div class="alert alert-error" style="margin:1rem">Failed to load.</div>';
+      }
+    }
+
+    // ── Render Posts Table ─────────────────────────────────────────────────
+    function renderPostsTable(blogs, containerId) {
+      const wrap = document.getElementById(containerId);
+      if (!blogs?.length) {
+        wrap.innerHTML = '<div class="empty" style="padding:2rem"><h3>No posts yet</h3><p>Create your first post.</p></div>';
+        return;
+      }
+      wrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Title</th>
+              <th>Cover</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${blogs.map((b, i) => `
+              <tr>
+                <td style="color:var(--muted); font-family:var(--mono); font-size:0.75rem;">${i+1}</td>
+                <td><strong>${b.title}</strong></td>
+                <td>${b.coverImage ? '<span class="badge badge-pub">Yes</span>' : '<span class="badge badge-draft">No</span>'}</td>
+                <td style="font-family:var(--mono); font-size:0.75rem;">${formatDate(b.createdAt)}</td>
+                <td>
+                  <div style="display:flex; gap:0.4rem;">
+                    <a href="../post.html?id=${b._id}" target="_blank" class="btn btn-ghost" style="font-size:0.72rem; padding:0.25rem 0.6rem;">View</a>
+                    <button class="btn btn-danger" style="font-size:0.72rem; padding:0.25rem 0.6rem;" onclick="deletePost('${b._id}', this)">Delete</button>
+                  </div>
+                </td>
+              </tr>`).join("")}
+          </tbody>
+        </table>`;
+    }
+
+    // ── Delete Post ───────────────────────────────────────────────────────
+    async function deletePost(id, btn) {
+      if (!confirm("Are you sure you want to delete this post?")) return;
+      btn.disabled = true; btn.textContent = "...";
+      try {
+        const res = await apiFetch(`/api/blog/${id}`, { method: "DELETE" });
+        const data = await res.json();
+        if (data.success) {
+          loadDashboard(); loadAllPosts();
+        } else {
+          alert("Delete failed: " + (data.message || "Unknown error"));
+          btn.disabled = false; btn.textContent = "Delete";
+        }
+      } catch (e) {
+        alert("Network error"); btn.disabled = false; btn.textContent = "Delete";
+      }
+    }
+
+    // ── Create Post ───────────────────────────────────────────────────────
+    async function createPost() {
+      const title = document.getElementById("postTitle").value.trim();
+      const body = document.getElementById("postBody").value.trim();
+      const file = document.getElementById("coverImageFile").files[0];
+      const alertBox = document.getElementById("createAlert");
+      const btn = document.getElementById("publishBtn");
+
+      alertBox.innerHTML = "";
+
+      if (!title || !body) {
+        alertBox.innerHTML = '<div class="alert alert-error">Title and content are required.</div>';
+        return;
+      }
+
+      btn.disabled = true; btn.textContent = "Publishing...";
+
+      try {
+        let res;
+        if (file) {
+          // Use FormData for file upload
+          const formData = new FormData();
+          formData.append("title", title);
+          formData.append("body", body);
+          formData.append("coverImage", file);
+          res = await apiFetchForm("/api/blog/create", formData);
+        } else {
+          // JSON if no file
+          res = await apiFetch("/api/blog/create", {
+            method: "POST",
+            body: JSON.stringify({ title, body }),
+          });
+        }
+
+        const data = await res.json();
+        if (data.success) {
+          alertBox.innerHTML = '<div class="alert alert-success">✅ Post published successfully!</div>';
+          clearForm();
+          setTimeout(() => showView("posts"), 1500);
+        } else {
+          alertBox.innerHTML = `<div class="alert alert-error">${data.message || "Failed to create post."}</div>`;
+        }
+      } catch (e) {
+        alertBox.innerHTML = '<div class="alert alert-error">Network error. Is backend running?</div>';
+      }
+
+      btn.disabled = false; btn.textContent = "Publish Post";
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+    function clearForm() {
+      document.getElementById("postTitle").value = "";
+      document.getElementById("postBody").value = "";
+      document.getElementById("coverImageFile").value = "";
+      document.getElementById("imgPreview").style.display = "none";
+      document.getElementById("createAlert").innerHTML = "";
+    }
+
+    function previewImage(input) {
+      const preview = document.getElementById("imgPreview");
+      if (input.files?.[0]) {
+        preview.src = URL.createObjectURL(input.files[0]);
+        preview.style.display = "block";
+      } else {
+        preview.style.display = "none";
+      }
+    }
+
+    function handleLogout() {
+      if (confirm("Logout from admin panel?")) logout();
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────
+    loadDashboard();
+  </script>
+</body>
+</html>
