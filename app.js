@@ -43,4 +43,10 @@ app.use("/user", userRoute);
 app.use("/api/blog", blogRoute);
 app.use("/api/posts", blogRoute);
 app.use("/api/categories", categoryRoute);
+
+// Temporary — remove after debugging
+app._router.stack.forEach(r => {
+    if (r.route) console.log(r.route.path);
+});
+
 module.exports = app;
