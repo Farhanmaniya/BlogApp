@@ -75,9 +75,7 @@
                 ${b.coverImage ? `
                 <div class="post-cover">
                     <div class="post-cover-img">
-                        <img src="${API_BASE}${b.coverImage}" alt="${b.title}">
-                    </div>
-                </div>` : ''}
+                            <img src="${getCoverImageUrl(b.coverImage)}" alt="${b.title}">
 
                 <div class="post-body">${bodyHTML}</div>
             `;

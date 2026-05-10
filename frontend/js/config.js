@@ -1,6 +1,6 @@
 // const { header } = require("express-validator");
 
-const API_BASE = "blogapp-production-6fe8.up.railway.app";
+const API_BASE = "https://blogapp-production-6fe8.up.railway.app";
 
 async function apiFetch(endpoint, options = {}) {
     const token = getToken();
@@ -30,6 +30,13 @@ async function apiFetchForm(endpoint, formData) {
         body: formData,
     });
     return res;
+}
+
+function getCoverImageUrl(src) {
+    if (!src) return "";
+    if (src.startsWith("http://") || src.startsWith("https://")) return src;
+    if (src.startsWith("//")) return `${window.location.protocol}${src}`;
+    return `${API_BASE}${src}`;
 }
 
 function formatDate(dateStr) {

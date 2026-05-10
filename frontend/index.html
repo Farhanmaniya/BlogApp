@@ -158,7 +158,7 @@
         grid.innerHTML = data.blogs.map(b => `
           <a href="post.html?id=${b._id}" class="post-card">
             <div class="card-img">
-              ${b.coverImage ? `<img src="${API_BASE}${b.coverImage}" alt="${b.title}">` : "📝"}
+              ${b.coverImage ? `<img src="${getCoverImageUrl(b.coverImage)}" alt="${b.title}">` : "📝"}
             </div>
             <div class="card-body">
               ${b.category ? `<div style="font-family:var(--mono);font-size:0.65rem;color:var(--accent);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;">${b.category}</div>` : ""}
@@ -186,7 +186,7 @@
       document.getElementById("featuredPost").innerHTML = `
         <a href="post.html?id=${b._id}" class="hero-featured">
           <div class="hero-img">
-            ${b.coverImage ? `<img src="${API_BASE}${b.coverImage}" alt="${b.title}">` : "📝"}
+            ${b.coverImage ? `<img src="${getCoverImageUrl(b.coverImage)}" alt="${b.title}">` : "📝"}
           </div>
           <div class="hero-body">
             <div class="hero-cat">Latest Post</div>
