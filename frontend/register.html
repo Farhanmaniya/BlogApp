@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register — Blogify</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-brand">Blog<span>ify</span></div>
+            <p class="auth-sub">Create your account and start writing</p>
+
+            <div id="alertBox"></div>
+
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="fullName" class="form-control"
+                    placeholder="Farhan Maniya">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="email" class="form-control"
+                    placeholder="you@example.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" id="password" class="form-control"
+                    placeholder="Min 6 characters">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Confirm Password</label>
+                <input type="password" id="confirmPassword" class="form-control"
+                    placeholder="Repeat password">
+            </div>
+
+            <button class="btn btn-primary btn-full" id="registerBtn"
+                onclick="handleRegister()">
+                Create Account
+            </button>
+
+            <p style="text-align:center;margin-top:1.25rem;font-size:0.82rem;color:var(--muted);">
+                Already have an account?
+                <a href="login.html" style="color:var(--accent);">Sign in</a>
+            </p>
+            <p style="text-align:center;margin-top:0.5rem;font-size:0.8rem;">
+                <a href="index.html" style="color:var(--muted);">← Back to Blog</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script>
+        // Already logged in — go home
+        if (isLoggedIn()) window.location.href = "index.html";
+
+        document.addEventListener("keydown", e => {
+            if (e.key === "Enter") handleRegister();
+        });
+
+        async function handleRegister() {
+            const fullName       = document.getElementById("fullName").value.trim();
+            const email          = document.getElementById("email").value.trim();
+            const password       = document.getElementById("password").value;
+            const confirmPassword= document.getElementById("confirmPassword").value;
+            const alertBox       = document.getElementById("alertBox");
+            const btn            = document.getElementById("registerBtn");
+
+            alertBox.innerHTML = "";
+
+            // Frontend validation
+            if (!fullName || !email || !password || !confirmPassword) {
+                alertBox.innerHTML = '<div class="alert alert-error">All fields are required.</div>';
+                return;
+            }
+            if (password.length < 6) {
+                alertBox.innerHTML = '<div class="alert alert-error">Password must be at least 6 characters.</div>';
+                return;
+            }
+            if (password !== confirmPassword) {
+                alertBox.innerHTML = '<div class="alert alert-error">Passwords do not match.</div>';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "Creating account...";
+
+            try {
+                const res = await apiFetch("/user/signup", {
+                    method: "POST",
+                    body: JSON.stringify({ fullName, email, password }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    alertBox.innerHTML = `<div class="alert alert-error">${data.error || "Registration failed."}</div>`;
+                    btn.disabled = false;
+                    btn.textContent = "Create Account";
+                    return;
+                }
+
+                // Auto login after register
+                const loginRes = await apiFetch("/user/signin", {
+                    method: "POST",
+                    body: JSON.stringify({ email, password }),
+                });
+                const loginData = await loginRes.json();
+
+                if (loginRes.ok && loginData.user) {
+                    localStorage.setItem("blogify_user", JSON.stringify(loginData.user));
+                    localStorage.setItem("blogify_token", loginData.token);
+                    alertBox.innerHTML = '<div class="alert alert-success">✅ Account created! Redirecting...</div>';
+                    setTimeout(() => window.location.href = "index.html", 1200);
+                } else {
+                    alertBox.innerHTML = '<div class="alert alert-success">✅ Account created! Please login.</div>';
+                    setTimeout(() => window.location.href = "login.html", 1500);
+                }
+
+            } catch (e) {
+                alertBox.innerHTML = '<div class="alert alert-error">Connection failed. Is backend running?</div>';
+                btn.disabled = false;
+                btn.textContent = "Create Account";
+            }
+        }
+    </script>
+</body>
+</html>

@@ -16,7 +16,7 @@
             <li><a href="index.html">← All Articles</a></li>
         </ul>
         <div class="nav-right">
-            <a href="admin/login.html" class="btn btn-ghost">Admin</a>
+            <div class="nav-right" id="navRight"></div>
         </div>
     </nav>
 
@@ -40,7 +40,86 @@
                     '<div class="alert alert-error" style="margin:8rem 4rem">No post ID provided.</div>';
                 return;
             }
+
+            try {
+                const res = await apiFetch(`/api/blog/${id}`);
+                const data = await res.json();
+
+                if (!data.success || !data.blog) {
+                    document.getElementById("postContent").innerHTML =
+                        '<div class="alert alert-error" style="margin:8rem 4rem">Post not found.</div>';
+                    return;
+                }
+
+                const b = data.blog;
+                document.title = `${b.title} — Blogify`;
+
+                const bodyHTML = b.body
+                    .split('\n')
+                    .filter(p => p.trim())
+                    .map(p => `<p>${p}</p>`)
+                    .join('');
+
+                document.getElementById("postContent").innerHTML = `
+                <div class="post-header">
+                    <a href="index.html" class="back-link">← Back to all posts</a>
+                    <div class="post-eyebrow">Blogify Article</div>
+                    <h1 class="post-title">${b.title}</h1>
+                    <div class="post-meta-row">
+                        <span>By <strong>${b.createdBy?.fullName || "Farhan Maniya"}</strong></span>
+                        <span>${formatDate(b.createdAt)}</span>
+                        <span>${b.views || 0} views</span>
+                    </div>
+                </div>
+
+                ${b.coverImage ? `
+                <div class="post-cover">
+                    <div class="post-cover-img">
+                        <img src="${API_BASE}${b.coverImage}" alt="${b.title}">
+                    </div>
+                </div>` : ''}
+
+                <div class="post-body">${bodyHTML}</div>
+            `;
+
+            } catch (e) {
+                document.getElementById("postContent").innerHTML =
+                    '<div class="alert alert-error" style="margin:8rem 4rem">Failed to load post. Is backend running?</div>';
+            }
         }
+        // Dynamic navbar
+        function renderNav() {
+            const wrap = document.getElementById("navRight");
+            if (isLoggedIn()) {
+                const user = getUser();
+                const isAdminUser = user?.role === "ADMIN";
+                wrap.innerHTML = `
+            <span style="font-size:0.82rem;color:var(--muted);">
+                Hi, ${user?.fullName || "User"}
+            </span>
+            ${isAdminUser
+                        ? `<a href="admin/dashboard.html" class="btn btn-ghost">Dashboard</a>`
+                        : `<a href="write.html" class="btn btn-primary">Write Post</a>`
+                    }
+            <button class="btn btn-ghost" onclick="handleLogout()">Logout</button>
+        `;
+            } else {
+                wrap.innerHTML = `
+            <a href="login.html" class="btn btn-ghost">Login</a>
+            <a href="register.html" class="btn btn-primary">Register</a>
+        `;
+            }
+        }
+
+        async function handleLogout() {
+            try { await apiFetch("/user/logout", { method: "POST" }); } catch (e) { }
+            localStorage.removeItem("blogify_user");
+            localStorage.removeItem("blogify_token");
+            window.location.href = "index.html";
+        }
+
+        renderNav();
+        loadPost();
     </script>
 </body>
 

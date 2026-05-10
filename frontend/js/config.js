@@ -1,38 +1,45 @@
-// ─── Blogify API Config ───────────────────────────────────────────────────
-// Change this ONE line when you deploy backend to Railway/Render
+// const { header } = require("express-validator");
+
 const API_BASE = "http://localhost:8000";
 
-// Regular JSON fetch (with cookies)
 async function apiFetch(endpoint, options = {}) {
+    const token = getToken();
+    const headers = {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+    };
+
+    if (token)  headers["Authorization"] = `Bearer ${token}`;
     const res = await fetch(`${API_BASE}${endpoint}`, {
         credentials: "include",
-        headers: { "Content-Type": "application/json", ...(options.headers || {})},
+        headers,
         ...options,
     });
     return res;
 }
 
-
-// For file uploads (multipart/form-data) - browser sets Content-Type automatically
 async function apiFetchForm(endpoint, formData) {
+    const token = getToken();
+    const headers = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}${endpoint}`, {
-        method: 'POST', 
-        credentials: 'include',
+        method: "POST",
+        credentials: "include",
+        headers,
         body: formData,
     });
     return res;
 }
 
-function formDate(dateStr) {
-    return new Date(dateStr).toLocaleDateString("en-In", {
-        day: "numeric",
-        month: "long",
-        year: "numeric"
+function formatDate(dateStr) {
+    return new Date(dateStr).toLocaleDateString("en-IN", {
+        day: "numeric", month: "long", year: "numeric",
     });
 }
 
 function isLoggedIn() {
-    return localStorage.getItem('blogify_user') !== null;
+    return localStorage.getItem("blogify_user") !== null;
 }
 
 function getUser() {
@@ -40,7 +47,30 @@ function getUser() {
     return u ? JSON.parse(u) : null;
 }
 
-function logout() {
-    localStorage.removeItem("blogify_user");
-    window.location.href = 'admin/login.html';
+function isAdmin() {
+    const u = getUser();
+    return u?.role === "ADMIN";
 }
+
+async function logout() {
+    try {
+        await apiFetch("/user/logout", { method: "POST" });
+    } catch (e) {}
+    localStorage.removeItem("blogify_user");
+    localStorage.removeItem("blogify_token");
+    window.location.href = "login.html";
+}
+
+// Call this on every protected page at the top
+function requireLogin(redirectPath = "login.html") {
+    if (!isLoggedIn()) {
+        window.location.href = redirectPath;
+        return false;
+    }
+    return true;
+}
+
+function getToken() {
+    return localStorage.getItem("blogify_token");
+}
+

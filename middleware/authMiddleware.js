@@ -1,3 +1,4 @@
+const { validate } = require("../models/User");
 const { validateToken } = require("../services/authService");
 
 function getTokenFromRequest(req, cookieName) {
@@ -54,7 +55,33 @@ function requireAuth(cookieName) {
     };
 }
 
+// Any logged-in user (admin OR user) can access
+function requireUser(cookieName) {
+    return (req, res, next) => {
+        const token = getTokenFromRequest(req, cookieName);
+
+        if(!token) {
+            return res.status(401).json({
+                success: false,
+                message: "Login required. Please sign in to continue.",
+            });
+        }
+
+        try {
+            const payload = validateToken(token);
+            req.user = payload;
+            return next();
+        } catch (error) {
+            return res.status(401).json({
+                success: false,
+                message: "Session expired. Please login again.",
+            });
+        }
+    };
+}
+
 module.exports = {
     checkAuth,
     requireAuth,
+    requireUser,
 };

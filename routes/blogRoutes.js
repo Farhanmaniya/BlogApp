@@ -1,27 +1,29 @@
 const { Router } = require("express");
 const router = Router();
-const { createBlog, 
-    upload, 
-    getAllBlogs, 
-    getBlogById,
-    getBlogBySlug,
-    deleteBlog,
-    updateBlog } = require("../controllers/blogController");
-const { requireAuth } = require("../middleware/authMiddleware");
+const {
+    createBlog, upload,
+    getAllBlogs, getBlogById, getBlogBySlug,
+    getCategories,
+    deleteBlog, updateBlog,
+} = require("../controllers/blogController");
+const { requireUser } = require("../middleware/authMiddleware");
 
 const uploadMiddleware = (req, res, next) => {
-  if (req.is && req.is("multipart/form-data")) {
-    return upload.single("coverImage")(req, res, next);
-  }
-  return next();
+    if (req.is && req.is("multipart/form-data")) {
+        return upload.single("coverImage")(req, res, next);
+    }
+    return next();
 };
 
-router.post("/create", requireAuth("token"), uploadMiddleware, createBlog);
+// ✅ Static routes FIRST — before /:id
+router.get("/",           getAllBlogs);
+router.get("/categories", getCategories);
 router.get("/slug/:slug", getBlogBySlug);
-router.get("/", getAllBlogs);
-router.get('/:id', getBlogById);
-router.delete('/:id', requireAuth("token"), deleteBlog);
-router.put('/:id', requireAuth('token'), updateBlog);
 
+// ✅ Dynamic routes AFTER
+router.get("/:id",    getBlogById);
+router.post("/create", requireUser("token"), uploadMiddleware, createBlog);
+router.put("/:id",    requireUser("token"), updateBlog);
+router.delete("/:id", requireUser("token"), deleteBlog);
 
 module.exports = router;

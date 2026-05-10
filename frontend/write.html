@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Write a Post — Blogify</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-brand">Blog<span>ify</span></a>
+        <div class="nav-right">
+            <span id="userName" style="font-size:0.82rem;color:var(--muted);"></span>
+            <a href="myposts.html" class="btn btn-ghost">My Posts</a>
+            <button class="btn btn-ghost" onclick="handleLogout()">Logout</button>
+        </div>
+    </nav>
+
+    <div style="max-width:780px; margin:0 auto; padding:100px 2rem 4rem;">
+
+        <div style="margin-bottom:2rem;">
+            <div class="section-eyebrow">New Article</div>
+            <h1 class="section-title">Write a Post</h1>
+            <div class="divider"></div>
+        </div>
+
+        <div class="create-card">
+            <div id="alertBox"></div>
+
+            <div class="form-group">
+                <label class="form-label">Title *</label>
+                <input type="text" id="postTitle" class="form-control"
+                    placeholder="Enter a compelling title...">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <input type="text" id="postCategory" class="form-control"
+                    placeholder="e.g. Node.js, Backend, Tutorial, Life">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Excerpt
+                    <span style="color:var(--muted);font-weight:400;">
+                        (short summary shown on homepage)
+                    </span>
+                </label>
+                <input type="text" id="postExcerpt" class="form-control"
+                    placeholder="One sentence that makes people want to read more...">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Cover Image (optional)</label>
+                <input type="file" id="coverImage" class="form-control"
+                    accept="image/*" onchange="previewImage(this)">
+                <img id="imgPreview" class="img-preview" alt="Cover preview">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Content *</label>
+                <textarea id="postBody" class="form-control"
+                    placeholder="Write your post here...&#10;&#10;Each paragraph on a new line.&#10;&#10;Share your knowledge, experience, or story.">
+                </textarea>
+            </div>
+
+            <div style="display:flex;gap:1rem;justify-content:flex-end;margin-top:1.5rem;">
+                <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+                <button class="btn btn-primary" id="publishBtn" onclick="publishPost()">
+                    Publish Post →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-brand">Blog<span>ify</span></div>
+        <p class="footer-copy">&copy; 2026 Blogify</p>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script>
+        // Auth guard — must be logged in
+        if (!requireLogin("login.html")) {}
+
+        const user = getUser();
+        document.getElementById("userName").textContent =
+            `Hi, ${user?.fullName || "User"}`;
+
+        async function publishPost() {
+            const title    = document.getElementById("postTitle").value.trim();
+            const body     = document.getElementById("postBody").value.trim();
+            const category = document.getElementById("postCategory").value.trim();
+            const excerpt  = document.getElementById("postExcerpt").value.trim();
+            const file     = document.getElementById("coverImage").files[0];
+            const alertBox = document.getElementById("alertBox");
+            const btn      = document.getElementById("publishBtn");
+
+            alertBox.innerHTML = "";
+
+            if (!title || !body) {
+                alertBox.innerHTML =
+                    '<div class="alert alert-error">Title and content are required.</div>';
+                return;
+            }
+            if (title.length < 5) {
+                alertBox.innerHTML =
+                    '<div class="alert alert-error">Title must be at least 5 characters.</div>';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "Publishing...";
+
+            try {
+                let res;
+                if (file) {
+                    const formData = new FormData();
+                    formData.append("title",      title);
+                    formData.append("body",       body);
+                    formData.append("category",   category);
+                    formData.append("excerpt",    excerpt);
+                    formData.append("coverImage", file);
+                    res = await apiFetchForm("/api/blog/create", formData);
+                } else {
+                    res = await apiFetch("/api/blog/create", {
+                        method: "POST",
+                        body: JSON.stringify({ title, body, category, excerpt }),
+                    });
+                }
+
+                const data = await res.json();
+
+                if (data.success) {
+                    alertBox.innerHTML =
+                        '<div class="alert alert-success">✅ Post published! Redirecting...</div>';
+                    setTimeout(() => window.location.href = "index.html", 1500);
+                } else {
+                    alertBox.innerHTML =
+                        `<div class="alert alert-error">${data.message || "Failed to publish."}</div>`;
+                    btn.disabled = false;
+                    btn.textContent = "Publish Post →";
+                }
+            } catch (e) {
+                alertBox.innerHTML =
+                    '<div class="alert alert-error">Network error. Is backend running?</div>';
+                btn.disabled = false;
+                btn.textContent = "Publish Post →";
+            }
+        }
+
+        function previewImage(input) {
+            const preview = document.getElementById("imgPreview");
+            if (input.files?.[0]) {
+                preview.src = URL.createObjectURL(input.files[0]);
+                preview.style.display = "block";
+            } else {
+                preview.style.display = "none";
+            }
+        }
+
+        function clearForm() {
+            ["postTitle","postBody","postCategory","postExcerpt"].forEach(id => {
+                document.getElementById(id).value = "";
+            });
+            document.getElementById("coverImage").value = "";
+            document.getElementById("imgPreview").style.display = "none";
+            document.getElementById("alertBox").innerHTML = "";
+        }
+
+        async function handleLogout() {
+            try { await apiFetch("/user/logout", { method: "POST" }); } catch(e) {}
+            localStorage.removeItem("blogify_user");
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>

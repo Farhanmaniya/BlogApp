@@ -1,20 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Blogify — Ideas Worth Reading</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
   <nav class="navbar">
-    <div class="nav-brand">Blog<span>ify</span></div>
+    <!-- <div class="nav-brand">Blog<span>ify</span></div> -->
+    <a href="index.html" class="nav-brand">Blog<span>ify</span></a>
     <ul class="nav-links">
       <li><a href="#latest">Articles</a></li>
     </ul>
-    <div class="nav-right">
-      <a href="admin/login.html" class="btn btn-ghost">Admin Login</a>
+    <div class="nav-right" id="navRight">
+      <!-- <a href="admin/login.html" class="btn btn-ghost">Admin Login</a> -->
+      <!-- Filled dynamically by JS below -->
     </div>
   </nav>
 
@@ -34,12 +38,29 @@
     </div>
   </div>
 
-  <!-- All Posts -->
+  <!-- Posts Section -->
   <div class="section" id="latest">
     <div class="section-eyebrow">All Articles</div>
     <h2 class="section-title">Latest Posts</h2>
     <div class="divider"></div>
-    <div id="postsGrid" class="posts-grid"><div class="loading">Loading</div></div>
+
+    <!-- ✅ Search Bar -->
+    <div style="margin-bottom:1.5rem; display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+      <input type="text" id="searchInput" placeholder="Search posts..." style="padding:0.6rem 1rem; border:1px solid var(--border); border-radius:5px;
+               font-family:var(--sans); font-size:0.875rem; background:var(--white);
+               color:var(--ink); outline:none; min-width:240px;" oninput="debounceSearch(this.value)">
+      <button class="btn btn-ghost" onclick="clearSearch()" id="clearBtn" style="display:none;">✕ Clear</button>
+    </div>
+
+    <!-- ✅ Category Filter Buttons -->
+    <div id="categoryFilter" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:2rem;"></div>
+
+    <!-- Posts Grid -->
+    <div id="postsGrid" class="posts-grid">
+      <div class="loading">Loading</div>
+    </div>
+
+    <!-- Pagination -->
     <div id="pagination" class="pagination"></div>
   </div>
 
@@ -51,37 +72,112 @@
   <script src="js/config.js"></script>
   <script>
     let page = 1;
+    let activeCategory = "";
+    let activeSearch = "";
+    let searchTimer = null;
     const LIMIT = 6;
 
+    // ── Search with debounce (waits 400ms after typing stops) ──
+    function debounceSearch(val) {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        activeSearch = val.trim();
+        page = 1;
+        document.getElementById("clearBtn").style.display = activeSearch ? "inline-flex" : "none";
+        loadPosts();
+      }, 400);
+    }
+
+    function clearSearch() {
+      document.getElementById("searchInput").value = "";
+      activeSearch = "";
+      document.getElementById("clearBtn").style.display = "none";
+      page = 1;
+      loadPosts();
+    }
+
+    // ── Load Categories ──
+    async function loadCategories() {
+      try {
+        const res = await apiFetch("/api/blog/categories");
+        const data = await res.json();
+        const wrap = document.getElementById("categoryFilter");
+
+        const allBtn = makeFilterBtn("All", true, () => {
+          activeCategory = ""; page = 1; loadPosts(); setActive(allBtn);
+        });
+        wrap.appendChild(allBtn);
+
+        if (data.success && data.categories?.length) {
+          data.categories.forEach(cat => {
+            const btn = makeFilterBtn(cat.name, false, () => {
+              activeCategory = cat._id; page = 1; loadPosts(); setActive(btn);
+            });
+            wrap.appendChild(btn);
+          });
+        }
+      } catch (e) { }
+    }
+
+    function makeFilterBtn(label, active, onClick) {
+      const btn = document.createElement("button");
+      btn.className = "btn btn-ghost" + (active ? " filter-active" : "");
+      btn.style.cssText = "font-size:0.78rem; padding:0.35rem 0.9rem;";
+      btn.textContent = label;
+      btn.onclick = onClick;
+      return btn;
+    }
+
+    function setActive(activeBtn) {
+      document.querySelectorAll("#categoryFilter button").forEach(b => b.classList.remove("filter-active"));
+      activeBtn.classList.add("filter-active");
+    }
+
+    // ── Load Posts ──
     async function loadPosts() {
       const grid = document.getElementById("postsGrid");
       grid.innerHTML = '<div class="loading">Loading</div>';
+
       try {
-        const res = await apiFetch(`/api/blog?page=${page}&limit=${LIMIT}`);
+        let url = `/api/blog?page=${page}&limit=${LIMIT}`;
+        if (activeCategory) url += `&category=${encodeURIComponent(activeCategory)}`;
+        if (activeSearch) url += `&search=${encodeURIComponent(activeSearch)}`;
+
+        const res = await apiFetch(url);
         const data = await res.json();
+
         if (!data.success || !data.blogs?.length) {
-          grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><h3>No posts yet</h3><p>Check back soon.</p></div>';
+          grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
+            <h3>${activeSearch ? "No results found" : "No posts yet"}</h3>
+            <p>${activeSearch ? `Nothing matched "${activeSearch}"` : "Check back soon."}</p>
+          </div>`;
+          document.getElementById("pagination").innerHTML = "";
           return;
         }
+
         grid.innerHTML = data.blogs.map(b => `
           <a href="post.html?id=${b._id}" class="post-card">
             <div class="card-img">
               ${b.coverImage ? `<img src="${API_BASE}${b.coverImage}" alt="${b.title}">` : "📝"}
             </div>
             <div class="card-body">
+              ${b.category ? `<div style="font-family:var(--mono);font-size:0.65rem;color:var(--accent);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;">${b.category}</div>` : ""}
               <div class="card-title">${b.title}</div>
-              <div class="card-excerpt">${b.body.substring(0, 120)}...</div>
+              <div class="card-excerpt">${b.excerpt}</div>
               <div class="card-meta">
-                <span class="card-author">${b.createdBy?.fullName || "Farhan"}</span> · ${formatDate(b.createdAt)}
+                <span class="card-author">${b.createdBy?.fullName || "Farhan"}</span>
+                · ${formatDate(b.createdAt)}
+                · ${b.views} views
               </div>
               <div class="read-more">Read More →</div>
             </div>
           </a>`).join("");
 
         renderPagination(data.totalPages || 1, page);
-        if (page === 1) renderFeatured(data.blogs[0]);
+        if (page === 1 && !activeCategory && !activeSearch) renderFeatured(data.blogs[0]);
+
       } catch (e) {
-        grid.innerHTML = '<div class="alert alert-error" style="grid-column:1/-1">Failed to load posts. Is the backend running?</div>';
+        grid.innerHTML = '<div class="alert alert-error" style="grid-column:1/-1">Failed to load posts. Is backend running?</div>';
       }
     }
 
@@ -103,10 +199,10 @@
     function renderPagination(total, current) {
       const wrap = document.getElementById("pagination");
       if (total <= 1) { wrap.innerHTML = ""; return; }
-      let html = `<button class="page-btn" onclick="goPage(${current-1})" ${current===1?"disabled":""}>←</button>`;
+      let html = `<button class="page-btn" onclick="goPage(${current - 1})" ${current === 1 ? "disabled" : ""}>←</button>`;
       for (let i = 1; i <= total; i++)
-        html += `<button class="page-btn ${i===current?"active":""}" onclick="goPage(${i})">${i}</button>`;
-      html += `<button class="page-btn" onclick="goPage(${current+1})" ${current===total?"disabled":""}>→</button>`;
+        html += `<button class="page-btn ${i === current ? "active" : ""}" onclick="goPage(${i})">${i}</button>`;
+      html += `<button class="page-btn" onclick="goPage(${current + 1})" ${current === total ? "disabled" : ""}>→</button>`;
       wrap.innerHTML = html;
     }
 
@@ -115,7 +211,41 @@
       document.getElementById("latest").scrollIntoView({ behavior: "smooth" });
     }
 
+    // Add active filter style
+    const style = document.createElement("style");
+    style.textContent = `.filter-active { background: var(--accent) !important; color: var(--white) !important; border-color: var(--accent) !important; }`;
+    document.head.appendChild(style);
+
+    loadCategories();
     loadPosts();
   </script>
+  <script>
+    // Dynamic navbar based on login state
+    function renderNav() {
+      const wrap = document.getElementById("navRight");
+      if (isLoggedIn()) {
+        const user = getUser();
+        wrap.innerHTML = `
+                <span style="font-size:0.82rem;color:var(--muted);">Hi, ${user.fullName || "User"}</span>
+                <a href="write.html" class="btn btn-primary">Write Post</a>
+                <button class="btn btn-ghost" onclick="logoutFromIndex()">Logout</button>
+            `;
+      } else {
+        wrap.innerHTML = `
+                <a href="login.html" class="btn btn-ghost">Login</a>
+                <a href="register.html" class="btn btn-primary">Register</a>
+            `;
+      }
+    }
+
+    async function logoutFromIndex() {
+      try { await apiFetch("/user/logout", { method: "POST" }); } catch (e) { }
+      localStorage.removeItem("blogify_user");
+      window.location.reload();
+    }
+
+    renderNav();
+  </script>
 </body>
+
 </html>

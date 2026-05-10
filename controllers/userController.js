@@ -27,13 +27,14 @@ const userSignIn = async (req, res) => {
 
     const token = createToken(user);
 
-    return res
+    res
       .cookie("token", token, {
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        sameSite: 'lax',
+        sameSite: "lax",
+        secure: false,
       })
-      .status(200)
+      return res.status(200)
       .json({
         message: "User signed in successfully",
         token,
@@ -83,7 +84,21 @@ const userSignup = async (req, res) => {
   }
 };
 
+const userLogout = async (req, res) => {
+  res
+    .clearCookie("token", {
+      httpOnly: true,
+      sameSite: "lax",
+    })
+    .status(200)
+    .json({
+      success: true,
+      message: "Logged out successfully",
+    });
+};
+
 module.exports = {
   userSignup,
   userSignIn,
+  userLogout,
 };
