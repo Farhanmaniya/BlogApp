@@ -1,6 +1,6 @@
 // const { header } = require("express-validator");
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "blogapp-production-6fe8.up.railway.app";
 
 async function apiFetch(endpoint, options = {}) {
     const token = getToken();
