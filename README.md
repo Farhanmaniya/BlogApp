@@ -56,6 +56,10 @@ npm run dev
 
 This starts the backend with `nodemon` on the port configured in `.env` or default `8000`.
 
+## 🔗 Live Demo
+- Frontend: https://farhan-blogify.netlify.app
+- Backend API: https://blogapp-production-6fe8.up.railway.app
+
 ## API endpoints
 
 ### Authentication
